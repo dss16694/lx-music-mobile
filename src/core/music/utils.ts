@@ -1,7 +1,7 @@
 import musicSdk, { findMusic } from '@/utils/musicSdk'
 import {
-  getOtherSource as getOtherSourceFromStore,
-  saveOtherSource as saveOtherSourceFromStore,
+  // getOtherSource as getOtherSourceFromStore,
+  // saveOtherSource as saveOtherSourceFromStore,
   getMusicUrl as getStoreMusicUrl,
   getPlayerLyric as getStoreLyric,
 } from '@/utils/data'
@@ -15,12 +15,14 @@ import { apis } from '@/utils/musicSdk/api-source'
 
 const getOtherSourcePromises = new Map()
 export const existTimeExp = /\[\d{1,2}:.*\d{1,4}\]/
+const otherSourceCache = new Map<LX.Music.MusicInfo | LX.Download.ListItem, LX.Music.MusicInfoOnline[]>()
 
 export const getOtherSource = async(musicInfo: LX.Music.MusicInfo | LX.Download.ListItem, isRefresh = false): Promise<LX.Music.MusicInfoOnline[]> => {
-  if (!isRefresh) {
-    const cachedInfo = await getOtherSourceFromStore(musicInfo.id)
-    if (cachedInfo.length) return cachedInfo
-  }
+  // if (!isRefresh) {
+  //   const cachedInfo = await getOtherSourceFromStore(musicInfo.id)
+  //   if (cachedInfo.length) return cachedInfo
+  // }
+  if (otherSourceCache.has(musicInfo)) return otherSourceCache.get(musicInfo)!
   let key: string
   let searchMusicInfo: {
     name: string
@@ -54,14 +56,17 @@ export const getOtherSource = async(musicInfo: LX.Music.MusicInfo | LX.Download.
     let timeout: null | number = BackgroundTimer.setTimeout(() => {
       timeout = null
       reject(new Error('find music timeout'))
-    }, 15_000)
+    }, 12_000)
     findMusic(searchMusicInfo).then((otherSource) => {
-      resolve(otherSource.map(toNewMusicInfo) as LX.Music.MusicInfoOnline[])
+      if (otherSourceCache.size > 10) otherSourceCache.clear()
+      const source = otherSource.map(toNewMusicInfo) as LX.Music.MusicInfoOnline[]
+      otherSourceCache.set(musicInfo, source)
+      resolve(source)
     }).catch(reject).finally(() => {
       if (timeout) BackgroundTimer.clearTimeout(timeout)
     })
   }).then((otherSource) => {
-    if (otherSource.length) void saveOtherSourceFromStore(musicInfo.id, otherSource)
+    // if (otherSource.length) void saveOtherSourceFromStore(musicInfo.id, otherSource)
     return otherSource
   }).finally(() => {
     if (getOtherSourcePromises.has(key)) getOtherSourcePromises.delete(key)
