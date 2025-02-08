@@ -24,6 +24,8 @@ public class LyricModule extends ReactContextBaseJavaModule {
 
   private int listenerCount = 0;
 
+  private String lastLyric;
+
   LyricModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
@@ -89,17 +91,23 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void setLyric(String lyric, String translation, String romaLyric, Promise promise) {
     // Log.d("Lyric", "set lyric: " + lyric);
     // Log.d("Lyric", "set lyric translation: " + translation);
-    if (lyric != null) this.lyric.setLyric(lyric, translation, romaLyric);
-    // 发送全局广播
-    Intent intent = new Intent("cn.toside.music.mobile.LYRIC_BROADCAST");
-    intent.putExtra("lyric", lyric);
-    if (translation != null) {
-      intent.putExtra("translatedlyric", translation);
+    if (lyric != null) {
+      this.lyric.setLyric(lyric, translation, romaLyric);
+      if(lastLyric == null || lastLyric.isEmpty() || !lyric.equals(lastLyric)){
+        // 发送全局广播
+        Intent intent = new Intent("cn.toside.music.mobile.LYRIC_BROADCAST");
+        intent.putExtra("lyric", lyric);
+        if (translation != null) {
+          intent.putExtra("translatedlyric", translation);
+        }
+
+        // 发送全局广播
+        reactContext.sendBroadcast(intent);
+        Log.d("LyricModule", "Global broadcast sent with lyric: " + lyric);
+        lastLyric = lyric;
+      }
     }
 
-    // 发送全局广播
-    reactContext.sendBroadcast(intent);
-    Log.d("LyricModule", "Global broadcast sent with lyric: " + lyric);
     promise.resolve(null);
   }
 
