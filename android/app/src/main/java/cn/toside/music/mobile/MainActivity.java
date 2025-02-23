@@ -4,12 +4,17 @@ import com.reactnativenavigation.NavigationActivity;
 import com.facebook.react.ReactActivityDelegate;
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint;
 import com.facebook.react.defaults.DefaultReactActivityDelegate;
+import android.os.Bundle;
+import android.os.Build;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.WindowManager;
 
 public class MainActivity extends NavigationActivity {
     @Override
-    protected void onresume() {
+    protected void onResume() {
+        super.onResume();
         ensureStatusBarVisible();
-        super.onresume();
     }
 
     private void ensureStatusBarVisible() {
