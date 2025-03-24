@@ -96,7 +96,6 @@ export const onDesktopLyricPositionChange = onPositionChange
 
 
 export const showRemoteLyric = async(isSend: boolean) => {
-  await setSendLyricTextEvent(isSend)
   if (isSend) {
     let lrc = playerState.musicInfo.lrc ?? ''
     let tlrc = playerState.musicInfo.tlrc ?? ''
