@@ -28,11 +28,9 @@ export default async(setting: LX.AppSetting) => {
       updateSetting({ 'desktopLyric.enable': false })
     })
   }
-  if (setting['player.isShowBluetoothLyric']) {
-    showRemoteLyric(true).catch(() => {
+  showRemoteLyric(true).catch(() => {
       updateSetting({ 'player.isShowBluetoothLyric': false })
     })
-  }
   onDesktopLyricPositionChange(position => {
     updateSetting({
       'desktopLyric.position.x': position.x,
