@@ -105,5 +105,10 @@ export const showRemoteLyric = async(isSend: boolean) => {
       tlrc = tranditionalize(tlrc)
     }
     await setLyric(lrc, tlrc, rlrc)
+    if (playerState.isPlay && !global.lx.gettingUrlId) {
+      void getPosition().then(position => {
+      void play(position * 1000)
+      })
+    }
   }
 }
