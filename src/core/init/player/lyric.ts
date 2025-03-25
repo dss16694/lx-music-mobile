@@ -38,11 +38,7 @@ export default async(setting: LX.AppSetting) => {
     })
   })
   onLyricLinePlay(({ text, extendedLyrics }) => {
-    if (!text && !state.isPlaying) {
-      void updateRemoteLyric()
-    } else {
-      void updateRemoteLyric(text)
-    }
+
   })
 
 
