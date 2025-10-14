@@ -87,7 +87,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void setLyric(String lyric, String translation, String romaLyric, Promise promise) {
-    if (lyric != null) {
+    if (this.lyric != null && lyric != null) {
       this.lyric.setLyric(lyric, translation, romaLyric);
       // 发送全局广播
       Intent intent = new Intent("cn.toside.music.mobile.LYRIC_BROADCAST");
