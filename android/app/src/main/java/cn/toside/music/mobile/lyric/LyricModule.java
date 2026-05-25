@@ -31,6 +31,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   private String currentTranslation = "";
 
   private BroadcastReceiver lyricRequestReceiver;
+  private boolean isSendLyricBroadcast = false;
 
   LyricModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -54,7 +55,9 @@ public class LyricModule extends ReactContextBaseJavaModule {
       @Override
       public void onReceive(Context context, Intent intent) {
         Log.d("LyricModule", "Received LYRIC_BROADCAST_REQUEST, resending current lyric");
-        sendLyricBroadcast();
+        if (isSendLyricBroadcast) {
+          sendLyricBroadcast();
+        }
       }
     };
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -65,6 +68,7 @@ public class LyricModule extends ReactContextBaseJavaModule {
   }
 
   private void sendLyricBroadcast() {
+    if (!isSendLyricBroadcast) return;
     if (currentLyric == null || currentLyric.isEmpty()) return;
     Intent intent = new Intent("cn.toside.music.mobile.LYRIC_BROADCAST");
     intent.putExtra("lyric", currentLyric);
@@ -73,6 +77,15 @@ public class LyricModule extends ReactContextBaseJavaModule {
     }
     reactContext.sendBroadcast(intent);
     Log.d("LyricModule", "Lyric broadcast resent on request");
+  }
+
+  @ReactMethod
+  public void setSendLyricBroadcast(boolean isSend, Promise promise) {
+    this.isSendLyricBroadcast = isSend;
+    if (isSend) {
+      sendLyricBroadcast();
+    }
+    promise.resolve(null);
   }
 
   @Override
@@ -126,6 +139,8 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void setLyric(String lyric, String translation, String romaLyric, Promise promise) {
     // Log.d("Lyric", "set lyric: " + lyric);
     // Log.d("Lyric", "set lyric translation: " + translation);
+    boolean lyricChanged = !currentLyric.equals(lyric);
+
     currentLyric = lyric;
     currentTranslation = translation;
 
@@ -133,8 +148,10 @@ public class LyricModule extends ReactContextBaseJavaModule {
       this.lyric.setLyric(lyric, translation, romaLyric);
     }
 
-    // 发送全局广播
-    sendLyricBroadcast();
+    // 歌词变化时才发送广播，避免重复发送
+    if (lyricChanged) {
+      sendLyricBroadcast();
+    }
 
     promise.resolve(null);
   }

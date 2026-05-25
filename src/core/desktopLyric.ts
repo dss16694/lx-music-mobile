@@ -2,6 +2,7 @@ import {
   hideDesktopLyricView,
   showDesktopLyricView,
   setSendLyricTextEvent,
+  setSendLyricBroadcast,
   setLyric,
   play,
   pause,
@@ -112,4 +113,8 @@ export const showRemoteLyric = async(isSend: boolean) => {
       })
     }
   }
+}
+
+export const enableLyricBroadcast = async(isSend: boolean) => {
+  await setSendLyricBroadcast(isSend)
 }

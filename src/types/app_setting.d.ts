@@ -202,6 +202,11 @@ declare global {
       'player.isShowBluetoothFullLyric': boolean
 
       /**
+       * 是否启用广播歌词
+       */
+      'player.isSendLyricBroadcast': boolean
+
+      /**
        * 播放详情页-是否缩放当前播放的歌词行
        */
       // 'playDetail.isZoomActiveLrc': boolean

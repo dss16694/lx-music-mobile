@@ -42,6 +42,15 @@ export const setSendLyricTextEvent = async(isSend: boolean) => {
 }
 
 /**
+ * 设置是否通过广播发送歌词
+ * @param isSend
+ * @returns
+ */
+export const setSendLyricBroadcast = async(isSend: boolean) => {
+  return LyricModule.setSendLyricBroadcast(isSend)
+}
+
+/**
  * show lyric
  */
 export const showDesktopLyricView = async({
