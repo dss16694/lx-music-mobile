@@ -1,6 +1,9 @@
 package cn.toside.music.mobile.lyric;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -24,9 +27,16 @@ public class LyricModule extends ReactContextBaseJavaModule {
 
   private int listenerCount = 0;
 
+  private String currentLyric = "";
+  private String currentTranslation = "";
+
+  private BroadcastReceiver lyricRequestReceiver;
+
   LyricModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
+
+    registerLyricRequestReceiver();
 
     // constants.put("THEME_GREEN", "#07c556");
     // constants.put("THEME_YELLOW", "#fffa12");
@@ -36,6 +46,33 @@ public class LyricModule extends ReactContextBaseJavaModule {
     // constants.put("THEME_PURPLE", "#c851d4");
     // constants.put("THEME_ORANGE", "#fffa12");
     // constants.put("THEME_GREY", "#bdc3c7");
+  }
+
+  private void registerLyricRequestReceiver() {
+    IntentFilter filter = new IntentFilter("cn.toside.music.mobile.LYRIC_BROADCAST_REQUEST");
+    lyricRequestReceiver = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+        Log.d("LyricModule", "Received LYRIC_BROADCAST_REQUEST, resending current lyric");
+        sendLyricBroadcast();
+      }
+    };
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      reactContext.registerReceiver(lyricRequestReceiver, filter, Context.RECEIVER_EXPORTED);
+    } else {
+      reactContext.registerReceiver(lyricRequestReceiver, filter);
+    }
+  }
+
+  private void sendLyricBroadcast() {
+    if (currentLyric == null || currentLyric.isEmpty()) return;
+    Intent intent = new Intent("cn.toside.music.mobile.LYRIC_BROADCAST");
+    intent.putExtra("lyric", currentLyric);
+    if (currentTranslation != null && !currentTranslation.isEmpty()) {
+      intent.putExtra("translatedlyric", currentTranslation);
+    }
+    reactContext.sendBroadcast(intent);
+    Log.d("LyricModule", "Lyric broadcast resent on request");
   }
 
   @Override
@@ -89,19 +126,15 @@ public class LyricModule extends ReactContextBaseJavaModule {
   public void setLyric(String lyric, String translation, String romaLyric, Promise promise) {
     // Log.d("Lyric", "set lyric: " + lyric);
     // Log.d("Lyric", "set lyric translation: " + translation);
+    currentLyric = lyric;
+    currentTranslation = translation;
+
     if (this.lyric != null) {
       this.lyric.setLyric(lyric, translation, romaLyric);
-      // 发送全局广播
-      Intent intent = new Intent("cn.toside.music.mobile.LYRIC_BROADCAST");
-      intent.putExtra("lyric", lyric);
-      if (translation != null) {
-        intent.putExtra("translatedlyric", translation);
-      }
-
-      // 发送全局广播
-      reactContext.sendBroadcast(intent);
-      Log.d("LyricModule", "Global broadcast sent with lyric: " + lyric);
     }
+
+    // 发送全局广播
+    sendLyricBroadcast();
 
     promise.resolve(null);
   }
