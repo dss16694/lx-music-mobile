@@ -4,6 +4,7 @@ import settingState from '@/store/setting/state'
 import { getMusicUrl } from '@/core/music'
 import { shareText } from '@/utils/nativeModules/utils'
 import { toast } from '@/utils/tools'
+import { checkUrl } from '@/utils/request'
 
 
 const APPID_MAP = {
@@ -40,6 +41,22 @@ const buildShareXml = (title: string, singer: string, dataUrl: string, albumUrl:
   return `<msg><appmsg appid="${appid}"><title>${escapedTitle}</title><des>${escapedSinger}</des><action>view</action><type>76</type><url>${escapedDataUrl}</url><dataurl>${escapedDataUrl}</dataurl><statextstr>GhQKEnd4NWFhMzMzNjA2NTUwZGZkNQ==</statextstr><songalbumurl>${escapedAlbumUrl}</songalbumurl><songlyric>${formattedLyric}</songlyric><musicShareItem><mvCoverUrl>${escapedAlbumUrl}</mvCoverUrl><mvSingerName>${escapedSinger}</mvSingerName><mid></mid></musicShareItem><finderLiveProductShare><isPriceBeginShow>false</isPriceBeginShow></finderLiveProductShare><gameshare><appbrandext><priority>-1</priority></appbrandext><duration>-1</duration></gameshare></appmsg></msg>`
 }
 
+const getValidMusicUrl = async(musicInfo: LX.Music.MusicInfo): Promise<string> => {
+  // 先尝试获取缓存的URL
+  let url = await getMusicUrl({ musicInfo })
+  if (!url) throw new Error('get url failed')
+
+  // 检查URL是否过期
+  const isValid = await checkUrl(url).then(() => true).catch(() => false)
+  if (!isValid) {
+    // URL已过期，强制刷新获取新链接
+    url = await getMusicUrl({ musicInfo, isRefresh: true })
+    if (!url) throw new Error('refresh url failed')
+  }
+
+  return url
+}
+
 export default () => {
   const handleShare = async() => {
     const playMusicInfo = playerState.playMusicInfo.musicInfo
@@ -48,11 +65,7 @@ export default () => {
     const musicInfo = 'progress' in playMusicInfo ? playMusicInfo.metadata.musicInfo : playMusicInfo
 
     try {
-      const url = await getMusicUrl({ musicInfo })
-      if (!url) {
-        toast(global.i18n.t('player__error_url'))
-        return
-      }
+      const url = await getValidMusicUrl(musicInfo)
 
       const name = playerState.musicInfo.name || musicInfo.name
       const singer = playerState.musicInfo.singer || musicInfo.singer
