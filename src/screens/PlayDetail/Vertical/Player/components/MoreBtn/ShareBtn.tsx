@@ -5,8 +5,32 @@ import { shareText } from '@/utils/nativeModules/utils'
 import { toast } from '@/utils/tools'
 
 
-const buildShareXml = (title: string, singer: string, url: string): string => {
-  return `<msg><appmsg appid="wx485a97c844086dc9" sdkver="0"><title>${title}</title><des>${singer}</des><action>view</action><type>3</type><showtype>0</showtype><content></content><url>${url}</url><dataurl>${url}</dataurl><lowdataurl>${url}</lowdataurl><thumburl>https://imgcache.qq.com/music/photo/album/300/300_albumpic_default.png</thumburl><appattach><totallen>0</totallen><attachid></attachid><fileext>mp3</fileext></appattach></appmsg><fromusername></fromusername><scene>0</scene><appinfo><version>1</version><appname>KuGou Music</appname></appinfo><commenturl></commenturl></msg>`
+const escapeXml = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+const escapeUrl = (url: string): string => {
+  return url.replace(/&/g, '&amp;')
+}
+
+const formatLyric = (lrc: string | null): string => {
+  if (!lrc) return ''
+  return escapeXml(lrc).replace(/\n/g, '&#x0A;').replace(/ /g, '&#x20;')
+}
+
+const buildShareXml = (title: string, singer: string, dataUrl: string, albumUrl: string, lyric: string): string => {
+  const escapedTitle = escapeXml(title)
+  const escapedSinger = escapeXml(singer)
+  const escapedDataUrl = escapeUrl(dataUrl)
+  const escapedAlbumUrl = escapeUrl(albumUrl)
+  const formattedLyric = formatLyric(lyric)
+
+  return `<msg><appmsg appid="wx5aa333606550dfd5"><title>${escapedTitle}</title><des>${escapedSinger}</des><action>view</action><type>76</type><url>${escapedDataUrl}</url><dataurl>${escapedDataUrl}</dataurl><statextstr>GhQKEnd4NWFhMzMzNjA2NTUwZGZkNQ==</statextstr><songalbumurl>${escapedAlbumUrl}</songalbumurl><songlyric>${formattedLyric}</songlyric><musicShareItem><mvCoverUrl>${escapedAlbumUrl}</mvCoverUrl><mvSingerName>${escapedSinger}</mvSingerName><mid></mid></musicShareItem><finderLiveProductShare><isPriceBeginShow>false</isPriceBeginShow></finderLiveProductShare><gameshare><appbrandext><priority>-1</priority></appbrandext><duration>-1</duration></gameshare></appmsg></msg>`
 }
 
 export default () => {
@@ -25,7 +49,9 @@ export default () => {
 
       const name = playerState.musicInfo.name || musicInfo.name
       const singer = playerState.musicInfo.singer || musicInfo.singer
-      const xmlContent = buildShareXml(name, singer, url)
+      const albumUrl = playerState.musicInfo.pic || ''
+      const lyric = playerState.musicInfo.lrc || ''
+      const xmlContent = buildShareXml(name, singer, url, albumUrl, lyric)
 
       void shareText(name, singer, xmlContent)
     } catch (err: any) {
