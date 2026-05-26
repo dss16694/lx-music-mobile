@@ -1,9 +1,15 @@
 import Btn from './Btn'
 import playerState from '@/store/player/state'
+import settingState from '@/store/setting/state'
 import { getMusicUrl } from '@/core/music'
 import { shareText } from '@/utils/nativeModules/utils'
 import { toast } from '@/utils/tools'
 
+
+const APPID_MAP = {
+  kugou: 'wx79f2c4418704b4f8',
+  netease: 'wx8dd6ecd81906fd84',
+} as const
 
 const escapeXml = (str: string): string => {
   return str
@@ -24,13 +30,14 @@ const formatLyric = (lrc: string | null): string => {
 }
 
 const buildShareXml = (title: string, singer: string, dataUrl: string, albumUrl: string, lyric: string): string => {
+  const appid = APPID_MAP[settingState.setting['common.shareCardType']] || APPID_MAP.kugou
   const escapedTitle = escapeXml(title)
   const escapedSinger = escapeXml(singer)
   const escapedDataUrl = escapeUrl(dataUrl)
   const escapedAlbumUrl = escapeUrl(albumUrl)
   const formattedLyric = formatLyric(lyric)
 
-  return `<msg><appmsg appid="wx5aa333606550dfd5"><title>${escapedTitle}</title><des>${escapedSinger}</des><action>view</action><type>76</type><url>${escapedDataUrl}</url><dataurl>${escapedDataUrl}</dataurl><statextstr>GhQKEnd4NWFhMzMzNjA2NTUwZGZkNQ==</statextstr><songalbumurl>${escapedAlbumUrl}</songalbumurl><songlyric>${formattedLyric}</songlyric><musicShareItem><mvCoverUrl>${escapedAlbumUrl}</mvCoverUrl><mvSingerName>${escapedSinger}</mvSingerName><mid></mid></musicShareItem><finderLiveProductShare><isPriceBeginShow>false</isPriceBeginShow></finderLiveProductShare><gameshare><appbrandext><priority>-1</priority></appbrandext><duration>-1</duration></gameshare></appmsg></msg>`
+  return `<msg><appmsg appid="${appid}"><title>${escapedTitle}</title><des>${escapedSinger}</des><action>view</action><type>76</type><url>${escapedDataUrl}</url><dataurl>${escapedDataUrl}</dataurl><statextstr>GhQKEnd4NWFhMzMzNjA2NTUwZGZkNQ==</statextstr><songalbumurl>${escapedAlbumUrl}</songalbumurl><songlyric>${formattedLyric}</songlyric><musicShareItem><mvCoverUrl>${escapedAlbumUrl}</mvCoverUrl><mvSingerName>${escapedSinger}</mvSingerName><mid></mid></musicShareItem><finderLiveProductShare><isPriceBeginShow>false</isPriceBeginShow></finderLiveProductShare><gameshare><appbrandext><priority>-1</priority></appbrandext><duration>-1</duration></gameshare></appmsg></msg>`
 }
 
 export default () => {

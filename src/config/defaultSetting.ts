@@ -5,6 +5,7 @@ const defaultSetting: LX.AppSetting = {
   'common.apiSource': '',
   'common.sourceNameType': 'alias',
   'common.shareType': 'system',
+  'common.shareCardType': 'kugou',
   'common.isAgreePact': false,
   'common.autoHidePlayBar': true,
   'common.drawerLayoutPosition': 'left',

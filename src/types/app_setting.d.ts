@@ -32,6 +32,11 @@ declare global {
       'common.shareType': 'system' | 'clipboard'
 
       /**
+       * 分享音乐卡片类型
+       */
+      'common.shareCardType': 'kugou' | 'netease'
+
+      /**
        * 是否同意软件协议
        */
       'common.isAgreePact': boolean
