@@ -43,6 +43,49 @@
 
 从 v1.0.0 起，我们发布了一个独立的[数据同步服务](https://github.com/lyswhut/lx-music-sync-server#readme)。如果你有服务器，可以将其部署到服务器上作为私人多端同步服务使用，详情看该项目说明。
 
+### 广播点歌播放
+
+本应用支持通过 Android 广播接收外部播放请求，可用于与其他应用（如语音助手、自动化工具等）集成。
+
+**广播 Action**: `cn.toside.music.mobile.ACTION_PLAY_MUSIC`
+
+**支持的参数（通过 Intent Extra 传递）**：
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `name` | String | 歌曲名（按歌曲搜索播放时必填） |
+| `singer` | String | 歌手名（可选，提高匹配精度） |
+| `albumName` | String | 专辑名（可选） |
+| `source` | String | 音乐平台：`kg`(酷狗) / `tx`(QQ音乐) / `mg`(咪咕) / `wy`(网易云) / `kw`(酷我)，不填则全平台搜索 |
+| `songlistId` | String | 歌单ID（按歌单ID播放时填写） |
+| `songlistSource` | String | 歌单来源平台（与 `songlistId` 配合使用） |
+| `keyword` | String | 歌单搜索关键字（如"轻柔的音乐"、"跑步歌单"等） |
+| `playLater` | boolean | `true` 添加到稍后播放队列，`false` 立即播放（默认） |
+
+**播放优先级**：`songlistId` + `songlistSource` > `keyword` > `name`
+
+**使用示例（adb 调试）**：
+
+```bash
+# 按歌名+歌手在酷狗搜索并播放
+adb shell am broadcast -a cn.toside.music.mobile.ACTION_PLAY_MUSIC \
+  --es name "晴天" --es singer "周杰伦" --es source "kg"
+
+# 全平台搜索播放（不指定 source）
+adb shell am broadcast -a cn.toside.music.mobile.ACTION_PLAY_MUSIC \
+  --es name "晴天" --es singer "周杰伦"
+
+# 按关键字搜索歌单并播放（如"轻柔的音乐"）
+adb shell am broadcast -a cn.toside.music.mobile.ACTION_PLAY_MUSIC \
+  --es keyword "轻柔的音乐" --es source "wy"
+
+# 按歌单ID播放
+adb shell am broadcast -a cn.toside.music.mobile.ACTION_PLAY_MUSIC \
+  --es songlistId "123456" --es songlistSource "wy"
+```
+
+播放歌单时会自动跳转到歌单详情页面。
+
 ## 贡献代码
 
 本项目欢迎 PR，但为了 PR 能顺利合并，需要注意以下几点：
