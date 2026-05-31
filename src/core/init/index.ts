@@ -8,6 +8,7 @@ import dataInit from './dataInit'
 import initSync from './sync'
 import initCommonState from './common'
 import { initDeeplink } from './deeplink'
+import { initBroadcastPlay } from './broadcastPlay'
 import { setApiSource } from '@/core/apiSource'
 import commonActions from '@/store/common/action'
 import settingState from '@/store/setting/state'
@@ -62,6 +63,9 @@ export default async() => {
 
   void initSync(setting)
   bootLog('Sync inited.')
+
+  initBroadcastPlay()
+  bootLog('Broadcast play inited.')
 
   // syncSetting()
 

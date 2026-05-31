@@ -39,11 +39,14 @@ public class UtilsModule extends ReactContextBaseJavaModule {
 
   UtilsEvent utilsEvent;
 
+  private static final String ACTION_PLAY_MUSIC = "cn.toside.music.mobile.ACTION_PLAY_MUSIC";
+
   UtilsModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
     utilsEvent = new UtilsEvent(reactContext);
     registerScreenBroadcastReceiver();
+    registerPlayMusicBroadcastReceiver();
   }
 
   @Override
@@ -96,6 +99,48 @@ public class UtilsModule extends ReactContextBaseJavaModule {
     };
 
     reactContext.registerReceiver(screenOnOffReceiver, theFilter);
+  }
+
+  private void registerPlayMusicBroadcastReceiver() {
+    final IntentFilter filter = new IntentFilter();
+    filter.addAction(ACTION_PLAY_MUSIC);
+
+    BroadcastReceiver playMusicReceiver = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+        String action = intent.getAction();
+        if (!ACTION_PLAY_MUSIC.equals(action)) return;
+
+        WritableMap params = Arguments.createMap();
+
+        String name = intent.getStringExtra("name");
+        String singer = intent.getStringExtra("singer");
+        String albumName = intent.getStringExtra("albumName");
+        String source = intent.getStringExtra("source");
+        String songlistId = intent.getStringExtra("songlistId");
+        String songlistSource = intent.getStringExtra("songlistSource");
+        String keyword = intent.getStringExtra("keyword");
+        boolean playLater = intent.getBooleanExtra("playLater", false);
+
+        if (name != null) params.putString("name", name);
+        if (singer != null) params.putString("singer", singer);
+        if (albumName != null) params.putString("albumName", albumName);
+        if (source != null) params.putString("source", source);
+        if (songlistId != null) params.putString("songlistId", songlistId);
+        if (songlistSource != null) params.putString("songlistSource", songlistSource);
+        if (keyword != null) params.putString("keyword", keyword);
+        params.putBoolean("playLater", playLater);
+
+        Log.d("UtilsModule", "Received play music broadcast: " + params.toString());
+        utilsEvent.sendEvent(utilsEvent.BROADCAST_PLAY_MUSIC, params);
+      }
+    };
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      reactContext.registerReceiver(playMusicReceiver, filter, Context.RECEIVER_EXPORTED);
+    } else {
+      reactContext.registerReceiver(playMusicReceiver, filter);
+    }
   }
 
   @ReactMethod
