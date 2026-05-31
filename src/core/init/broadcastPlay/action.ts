@@ -5,12 +5,24 @@ import { playNext } from '@/core/player/player'
 import playerState from '@/store/player/state'
 import { LIST_IDS } from '@/config/constant'
 import { playSonglist } from '@/core/init/deeplink/playSonglist'
+import { navigations } from '@/navigation'
+import commonState from '@/store/common/state'
+import type { ListInfoItem } from '@/store/songlist/state'
 import type { BroadcastPlayData } from './index'
 
 const VALID_SOURCES: LX.OnlineSource[] = ['kg', 'tx', 'mg', 'wy', 'kw']
 
 const isValidSource = (source?: string): source is LX.OnlineSource => {
   return source != null && VALID_SOURCES.includes(source as LX.OnlineSource)
+}
+
+/**
+ * 跳转到歌单详情页面
+ */
+const navigateToSonglistDetail = (info: ListInfoItem) => {
+  const homeComponentId = commonState.componentIds.home
+  if (!homeComponentId) return
+  navigations.pushSonglistDetailScreen(homeComponentId, info)
 }
 
 /**
@@ -83,14 +95,24 @@ export const handleBroadcastSearchPlay = async(data: BroadcastPlayData) => {
 
 /**
  * 通过广播播放歌单（按歌单ID）
- * 使用歌单ID和平台信息获取歌单详情并播放
+ * 使用歌单ID和平台信息获取歌单详情并播放，同时跳转到歌单详情页
  */
 export const handleBroadcastSonglistPlay = async(data: BroadcastPlayData) => {
   const { songlistId, songlistSource } = data
   if (!songlistId || !isValidSource(songlistSource)) return
 
   try {
-    await playSonglist(songlistSource as LX.OnlineSource, songlistId)
+    const source = songlistSource as LX.OnlineSource
+
+    // 跳转到歌单详情页
+    navigateToSonglistDetail({
+      id: songlistId,
+      author: '',
+      name: '',
+      source,
+    })
+
+    await playSonglist(source, songlistId)
     console.log('broadcast play: playing songlist -', songlistSource, songlistId)
   } catch (err) {
     console.error('broadcast play songlist error:', err)
@@ -100,7 +122,7 @@ export const handleBroadcastSonglistPlay = async(data: BroadcastPlayData) => {
 /**
  * 通过广播按关键字搜索歌单并播放
  * 例如传入 "轻柔的音乐"、"睡前轻音乐"、"跑步歌单" 等关键字
- * 会在指定平台或默认平台搜索歌单，找到第一个匹配的歌单后播放
+ * 会在指定平台或默认平台搜索歌单，找到第一个匹配的歌单后播放，同时跳转到歌单详情页
  */
 export const handleBroadcastKeywordSonglistPlay = async(data: BroadcastPlayData) => {
   const { keyword, source } = data
@@ -116,7 +138,7 @@ export const handleBroadcastKeywordSonglistPlay = async(data: BroadcastPlayData)
     }
 
     const result = await (sdk.songList.search(keyword, 1, 20) as Promise<{
-      list: Array<{ id: string, name: string, source: LX.OnlineSource }>
+      list: Array<{ id: string, name: string, author?: string, img?: string, play_count?: string, source: LX.OnlineSource }>
       total: number
     }>)
 
@@ -128,6 +150,16 @@ export const handleBroadcastKeywordSonglistPlay = async(data: BroadcastPlayData)
     // 取第一个搜索结果的歌单进行播放
     const targetSonglist = result.list[0]
     console.log('broadcast play: found songlist -', targetSonglist.name, 'from', searchSource)
+
+    // 跳转到歌单详情页
+    navigateToSonglistDetail({
+      id: targetSonglist.id,
+      author: targetSonglist.author || '',
+      name: targetSonglist.name || '',
+      img: targetSonglist.img,
+      play_count: targetSonglist.play_count,
+      source: searchSource,
+    })
 
     await playSonglist(searchSource, targetSonglist.id)
     console.log('broadcast play: playing keyword songlist -', keyword, searchSource)
