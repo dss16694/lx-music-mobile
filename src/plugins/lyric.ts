@@ -37,11 +37,16 @@ type WordPlayHook = (info: WordPlayInfo) => void
 
 // ── 逐字解析 ─────────────────────────────────────────────────
 /**
- * 解析 lxlyric 格式：
- *   [mm:ss.xxx]<offsetMs,durationMs>字<offsetMs,durationMs>字...
+ * 解析 lxlyric 格式（酷狗 KRC / 网易 YRC / 酷我 / 咪咕 MRC 共用）：
+ *   [mm:ss.ms]<offsetMs,durationMs>字<offsetMs,durationMs>字...
+ *
+ * 注意：ms 部分位数不固定（1~3位），直接是毫秒数，不需要补零
+ *   "01:03.50"  → ms=50  (50ms)
+ *   "01:03.500" → ms=500 (500ms)
+ *   "01:03.5"   → ms=5   (5ms, 酷狗部分歌词)
  */
 const WORD_TOKEN_RE = /<(\d+),(\d+)>([^<\[]*)/g
-const LINE_TIME_RE = /^\[(\d{1,2}):(\d{1,2})\.(\d{1,3})\]/
+const LINE_TIME_RE = /^\[(\d{1,2}):(\d{1,2})\.(\d{1,4})\]/
 
 const parseWordLyric = (lxlyric: string): WordLine[] => {
   const result: WordLine[] = []
@@ -54,7 +59,8 @@ const parseWordLyric = (lxlyric: string): WordLine[] => {
 
     const m = parseInt(timeMatch[1])
     const s = parseInt(timeMatch[2])
-    const ms = parseInt(timeMatch[3].padEnd(3, '0'))
+    // ms 直接是毫秒数，位数不固定，不做补零处理
+    const ms = parseInt(timeMatch[3])
     const lineTime = m * 60_000 + s * 1_000 + ms
 
     const body = line.slice(timeMatch[0].length)
@@ -293,8 +299,16 @@ const lrcTools = {
     this.lrc!.setLyric(this.lyricText, extendedLyrics)
     // 同步更新逐字歌词
     if (this.lxlyricText) {
-      wordPlayerTools.setLines(parseWordLyric(this.lxlyricText))
+      const wordLines = parseWordLyric(this.lxlyricText)
+      console.log('[lyric] parseWordLyric result', {
+        inputLen: this.lxlyricText.length,
+        inputPreview: this.lxlyricText.slice(0, 300),
+        parsedLines: wordLines.length,
+        firstLine: wordLines[0],
+      })
+      wordPlayerTools.setLines(wordLines)
     } else {
+      console.log('[lyric] lxlyricText is empty, word lyric disabled')
       wordPlayerTools.setLines([])
     }
   },

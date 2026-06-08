@@ -118,6 +118,13 @@ export const setLyric = async() => {
     if (playerState.musicInfo.tlrc) tlrc = playerState.musicInfo.tlrc
     if (playerState.musicInfo.rlrc) rlrc = playerState.musicInfo.rlrc
     if (playerState.musicInfo.lxlrc) lxlrc = playerState.musicInfo.lxlrc
+    console.log('[lyric] setLyric called', {
+      hasLrc: !!playerState.musicInfo.lrc,
+      lrcLen: playerState.musicInfo.lrc?.length ?? 0,
+      hasLxlrc: !!lxlrc,
+      lxlrcLen: lxlrc.length,
+      lxlrcPreview: lxlrc.slice(0, 200),
+    })
     await handleSetLyric(playerState.musicInfo.lrc, tlrc, rlrc, lxlrc)
   }
 

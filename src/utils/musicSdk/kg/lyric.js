@@ -106,7 +106,9 @@ export default {
       }
       if (body.candidates.length) {
         let info = body.candidates[0]
-        return { id: info.id, accessKey: info.accesskey, fmt: (info.krctype == 1 && info.contenttype != 1) ? 'krc' : 'lrc' }
+        const fmt = (info.krctype == 1 && info.contenttype != 1) ? 'krc' : 'lrc'
+        console.log('[kg lyric] search result', { krctype: info.krctype, contenttype: info.contenttype, fmt })
+        return { id: info.id, accessKey: info.accesskey, fmt }
       }
       return null
     })
@@ -130,7 +132,15 @@ export default {
 
       switch (body.fmt) {
         case 'krc':
-          return decodeLyric(body.content).then(result => parseLyric(result))
+          return decodeLyric(body.content).then(result => {
+            const parsed = parseLyric(result)
+            console.log('[kg lyric] krc parsed', {
+              hasLxlyric: !!parsed.lxlyric,
+              lxlyricLen: parsed.lxlyric?.length ?? 0,
+              lxlyricPreview: parsed.lxlyric?.slice(0, 300) ?? '',
+            })
+            return parsed
+          })
         case 'lrc':
           return {
             lyric: Buffer.from(body.content, 'base64').toString('utf-8'),
