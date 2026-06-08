@@ -242,6 +242,11 @@ declare global {
       'playDetail.isShowLyricProgressSetting': boolean
 
       /**
+       * 播放详情页-是否启用逐字歌词
+       */
+      'playDetail.isShowWordLyric': boolean
+
+      /**
        * 是否启用桌面歌词
        */
       'desktopLyric.enable': boolean

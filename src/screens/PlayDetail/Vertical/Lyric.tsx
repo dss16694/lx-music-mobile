@@ -1,9 +1,7 @@
 import { memo, useMemo, useEffect, useRef, useCallback } from 'react'
 import { View, FlatList, type FlatListProps, type LayoutChangeEvent, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native'
-// import { useLayout } from '@/utils/hooks'
-import { type Line, useLrcPlay, useLrcSet } from '@/plugins/lyric'
+import { type Line, useLrcPlay, useLrcSet, useWordLrcPlay, useWordLrcSet } from '@/plugins/lyric'
 import { createStyle } from '@/utils/tools'
-// import { useComponentIds } from '@/store/common/hook'
 import { useTheme } from '@/store/theme/hook'
 import { useSettingValue } from '@/store/setting/hook'
 import { AnimatedColorText } from '@/components/common/Text'
@@ -11,50 +9,9 @@ import { setSpText } from '@/utils/pixelRatio'
 import playerState from '@/store/player/state'
 import { scrollTo } from '@/utils/scroll'
 import PlayLine, { type PlayLineType } from '../components/PlayLine'
-// import { screenkeepAwake } from '@/utils/nativeModules/utils'
-// import { log } from '@/utils/log'
-// import { toast } from '@/utils/tools'
+import WordLrcLine from '../components/WordLrcLine'
 
 type FlatListType = FlatListProps<Line>
-
-// const useLock = () => {
-//   const showCommentRef = useRef(false)
-
-
-//   useEffect(() => {
-//     let appstateListener = AppState.addEventListener('change', (state) => {
-//       switch (state) {
-//         case 'active':
-//           if (showLyricRef.current && !showCommentRef.current) screenkeepAwake()
-//           break
-//         case 'background':
-//           screenUnkeepAwake()
-//           break
-//       }
-//     })
-//     return () => {
-//       appstateListener.remove()
-//     }
-//   }, [])
-//   useEffect(() => {
-//     let listener: ReturnType<typeof onNavigationComponentDidDisappearEvent>
-//     showCommentRef.current = !!componentIds.comment
-//     if (showCommentRef.current) {
-//       if (showLyricRef.current) screenUnkeepAwake()
-//       listener = onNavigationComponentDidDisappearEvent(componentIds.comment as string, () => {
-//         if (showLyricRef.current && AppState.currentState == 'active') screenkeepAwake()
-//       })
-//     }
-
-//     const rm = global.state_event.on('componentIdsUpdated', (ids) => {
-
-//     })
-
-//     return () => {
-//       if (listener) listener.remove()
-//     }
-//   }, [])
-// }
 
 interface LineProps {
   line: Line
@@ -62,6 +19,8 @@ interface LineProps {
   activeLine: number
   onLayout: (lineNum: number, height: number, width: number) => void
 }
+
+/** 普通逐句歌词行 */
 const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
   const theme = useTheme()
   const lrcFontSize = useSettingValue('playDetail.vertical.style.lrcFontSize')
@@ -86,9 +45,6 @@ const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
     onLayout(lineNum, nativeEvent.layout.height, nativeEvent.layout.width)
   }
 
-
-  // textBreakStrategy="simple" 用于解决某些设备上字体被截断的问题
-  // https://stackoverflow.com/a/72822360
   return (
     <View style={styles.line} onLayout={handleLayout}>
       <AnimatedColorText style={{
@@ -112,11 +68,109 @@ const LrcLine = memo(({ line, lineNum, activeLine, onLayout }: LineProps) => {
     prevProps.activeLine != nextProps.lineNum &&
     nextProps.activeLine != nextProps.lineNum
 })
+
 const wait = async() => new Promise(resolve => setTimeout(resolve, 100))
 
+// ── 逐字模式列表 ────────────────────────────────────────────────
+import { type WordLine, type WordPlayInfo } from '@/plugins/lyric'
+
+type WordFlatListType = FlatListProps<WordLine>
+
+interface WordListProps {
+  wordLines: WordLine[]
+  activeLine: number
+  wordPlayInfo: WordPlayInfo
+  size: number
+  textAlign: 'left' | 'center' | 'right'
+  flatListRef: React.RefObject<FlatList>
+  playLineRef: React.RefObject<PlayLineType>
+  isShowLyricProgressSetting: boolean
+  lrcLines: Line[]
+  onLineLayout: (lineNum: number, height: number, width: number) => void
+  onSpaceLayout: (e: LayoutChangeEvent) => void
+  onScrollBeginDrag: () => void
+  onScrollEndDrag: () => void
+  onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void
+  onScrollToIndexFailed: WordFlatListType['onScrollToIndexFailed']
+  onPlayLine: (time: number) => void
+  initialNumToRender: number
+}
+
+const WordLyricList = ({
+  wordLines,
+  activeLine,
+  wordPlayInfo,
+  size,
+  textAlign,
+  flatListRef,
+  playLineRef,
+  isShowLyricProgressSetting,
+  lrcLines,
+  onLineLayout,
+  onSpaceLayout,
+  onScrollBeginDrag,
+  onScrollEndDrag,
+  onScroll,
+  onScrollToIndexFailed,
+  onPlayLine,
+  initialNumToRender,
+}: WordListProps) => {
+  const spaceComponent = useMemo(() => (
+    <View style={styles.space} onLayout={onSpaceLayout}></View>
+  ), [onSpaceLayout])
+
+  const renderItem: WordFlatListType['renderItem'] = ({ item, index }) => {
+    // 用 lrcLines[index] 的 extendedLyrics 做翻译/罗马音
+    const extendedLyrics = lrcLines[index]?.extendedLyrics ?? []
+    return (
+      <WordLrcLine
+        line={item}
+        lineNum={index}
+        activeLine={activeLine}
+        wordPlayInfo={wordPlayInfo}
+        size={size}
+        textAlign={textAlign}
+        extendedLyrics={extendedLyrics}
+        onLayout={onLineLayout}
+      />
+    )
+  }
+
+  const getKey: WordFlatListType['keyExtractor'] = (item, index) => `w${index}${item.text}`
+
+  return (
+    <>
+      <FlatList
+        data={wordLines}
+        renderItem={renderItem}
+        keyExtractor={getKey}
+        style={styles.container}
+        ref={flatListRef}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={spaceComponent}
+        ListFooterComponent={spaceComponent}
+        onScrollBeginDrag={onScrollBeginDrag}
+        onScrollEndDrag={onScrollEndDrag}
+        fadingEdgeLength={100}
+        initialNumToRender={Math.max(initialNumToRender + 10, 10)}
+        onScrollToIndexFailed={onScrollToIndexFailed}
+        onScroll={onScroll}
+      />
+      { isShowLyricProgressSetting ? <PlayLine ref={playLineRef} onPlayLine={onPlayLine} /> : null }
+    </>
+  )
+}
+
+// ── 主组件 ───────────────────────────────────────────────────────
 export default () => {
   const lyricLines = useLrcSet()
   const { line } = useLrcPlay()
+  const wordLines = useWordLrcSet()
+  const wordPlayInfo = useWordLrcPlay()
+  const isShowWordLyric = useSettingValue('playDetail.isShowWordLyric')
+  const lrcFontSize = useSettingValue('playDetail.vertical.style.lrcFontSize')
+  const textAlign = useSettingValue('playDetail.style.align')
+
   const flatListRef = useRef<FlatList>(null)
   const playLineRef = useRef<PlayLineType>(null)
   const isPauseScrollRef = useRef(true)
@@ -128,29 +182,20 @@ export default () => {
   const listLayoutInfoRef = useRef<{ spaceHeight: number, lineHeights: number[] }>({ spaceHeight: 0, lineHeights: [] })
   const scrollCancelRef = useRef<(() => void) | null>(null)
   const isShowLyricProgressSetting = useSettingValue('playDetail.isShowLyricProgressSetting')
-  // useLock()
-  // const [imgUrl, setImgUrl] = useState(null)
-  // const theme = useGetter('common', 'theme')
-  // const { onLayout, ...layout } = useLayout()
 
-  // useEffect(() => {
-  //   const url = playMusicInfo ? playMusicInfo.musicInfo.img : null
-  //   if (imgUrl == url) return
-  //   setImgUrl(url)
-  // // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [playMusicInfo])
+  // 逐字模式下使用 wordLines 的行索引，普通模式下使用 line
+  const useWordMode = isShowWordLyric && wordLines.length > 0
+  const activeLine = useWordMode ? wordPlayInfo.line : line
 
-  // const imgWidth = useMemo(() => layout.width * 0.75, [layout.width])
   const handleScrollToActive = (index = lineRef.current.line) => {
     if (index < 0) return
     if (flatListRef.current) {
-      // console.log('handleScrollToActive', index)
       if (scrollInfoRef.current && lineRef.current.line - lineRef.current.prevLine == 1) {
         let offset = listLayoutInfoRef.current.spaceHeight
-        for (let line = 0; line < index; line++) {
-          offset += listLayoutInfoRef.current.lineHeights[line]
+        for (let l = 0; l < index; l++) {
+          offset += listLayoutInfoRef.current.lineHeights[l]
         }
-        offset += (listLayoutInfoRef.current.lineHeights[line] ?? 0) / 2
+        offset += (listLayoutInfoRef.current.lineHeights[index] ?? 0) / 2
         try {
           scrollCancelRef.current = scrollTo(flatListRef.current, scrollInfoRef.current, offset - scrollInfoRef.current.layoutMeasurement.height * 0.42, 600, () => {
             scrollCancelRef.current = null
@@ -207,7 +252,6 @@ export default () => {
     }, 3000)
   }
 
-
   useEffect(() => {
     return () => {
       if (delayScrollTimeout.current) {
@@ -221,17 +265,15 @@ export default () => {
     }
   }, [])
 
+  // 歌词列表变化时重置滚动
+  const currentLines = useWordMode ? wordLines : lyricLines
   useEffect(() => {
-    // linesRef.current = lyricLines
     listLayoutInfoRef.current.lineHeights = []
     lineRef.current.prevLine = 0
     lineRef.current.line = 0
     if (!flatListRef.current) return
-    flatListRef.current.scrollToOffset({
-      offset: 0,
-      animated: false,
-    })
-    if (!lyricLines.length) return
+    flatListRef.current.scrollToOffset({ offset: 0, animated: false })
+    if (!currentLines.length) return
     playLineRef.current?.updateLyricLines(lyricLines)
     requestAnimationFrame(() => {
       if (isFirstSetLrc.current) {
@@ -248,25 +290,27 @@ export default () => {
       }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lyricLines])
+  }, [currentLines])
 
+  // 行变化时滚动（逐字模式用 wordPlayInfo.line，普通模式用 line）
   useEffect(() => {
-    if (line < 0) return
+    const curLine = useWordMode ? wordPlayInfo.line : line
+    if (curLine < 0) return
     lineRef.current.prevLine = lineRef.current.line
-    lineRef.current.line = line
+    lineRef.current.line = curLine
     if (!flatListRef.current || isPauseScrollRef.current) return
 
-    if (line - lineRef.current.prevLine != 1) {
-      handleScrollToActive()
+    if (curLine - lineRef.current.prevLine != 1) {
+      handleScrollToActive(curLine)
       return
     }
 
     delayScrollTimeout.current = setTimeout(() => {
       delayScrollTimeout.current = null
-      handleScrollToActive()
+      handleScrollToActive(curLine)
     }, 600)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [line])
+  }, [useWordMode ? wordPlayInfo.line : line])
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -297,6 +341,34 @@ export default () => {
     global.app_event.setProgress(time)
   }, [])
 
+  const size = lrcFontSize / 10
+
+  // 逐字模式
+  if (useWordMode) {
+    return (
+      <WordLyricList
+        wordLines={wordLines}
+        activeLine={wordPlayInfo.line}
+        wordPlayInfo={wordPlayInfo}
+        size={size}
+        textAlign={textAlign}
+        flatListRef={flatListRef}
+        playLineRef={playLineRef}
+        isShowLyricProgressSetting={isShowLyricProgressSetting}
+        lrcLines={lyricLines}
+        onLineLayout={handleLineLayout}
+        onSpaceLayout={handleSpaceLayout}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        onScrollEndDrag={onScrollEndDrag}
+        onScroll={handleScroll}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        onPlayLine={handlePlayLine}
+        initialNumToRender={wordPlayInfo.line}
+      />
+    )
+  }
+
+  // 普通逐句模式
   const renderItem: FlatListType['renderItem'] = ({ item, index }) => {
     return (
       <LrcLine line={item} lineNum={index} activeLine={line} onLayout={handleLineLayout} />
@@ -304,9 +376,9 @@ export default () => {
   }
   const getkey: FlatListType['keyExtractor'] = (item, index) => `${index}${item.text}`
 
-  const spaceComponent = useMemo(() => (
+  const spaceComponent = (
     <View style={styles.space} onLayout={handleSpaceLayout}></View>
-  ), [handleSpaceLayout])
+  )
 
   return (
     <>
@@ -336,7 +408,6 @@ const styles = createStyle({
     flex: 1,
     paddingLeft: 20,
     paddingRight: 20,
-    // backgroundColor: 'rgba(0,0,0,0.1)',
   },
   space: {
     paddingTop: '100%',
@@ -344,21 +415,12 @@ const styles = createStyle({
   line: {
     paddingTop: 10,
     paddingBottom: 10,
-    // opacity: 0,
   },
   lineText: {
     textAlign: 'center',
-    // fontSize: 16,
-    // lineHeight: 20,
-    // paddingTop: 5,
-    // paddingBottom: 5,
-    // opacity: 0,
   },
   lineTranslationText: {
     textAlign: 'center',
-    // fontSize: 13,
-    // lineHeight: 17,
     paddingTop: 5,
-    // paddingBottom: 5,
   },
 })

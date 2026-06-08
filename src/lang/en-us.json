@@ -190,6 +190,7 @@
   "play_detail_setting_playback_rate": "Playback Rate",
   "play_detail_setting_playback_rate_reset": "Reset",
   "play_detail_setting_show_lyric_progress_setting": "Allow to adjust playback progress by drag-and-drop lyrics",
+  "play_detail_setting_show_word_lyric": "Enable word-by-word lyrics (Karaoke effect)",
   "play_detail_setting_title": "Player Options",
   "play_detail_setting_volume": "Volume",
   "play_detail_todo_tip": "What do you want? No, this function has not been implemented yet 😛, But you can try to locate the currently playing song by long pressing (Only valid for playing songs in \"Your Library\")",
